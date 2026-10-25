@@ -35,7 +35,12 @@ jobs:
             echo "keyPassword=123456"
             echo "apiId=35232256"
             echo "apiHash=6c9b7f5467f4d00baef445bee72538b1"
+            echo "helperBotId=0"
+            echo "helperBotUsername=botfather"
+            echo "sentryDsn=https://dummy@o0.ingest.sentry.io/0"
+            echo "mapsApiKey=AIzaSyDUMMYDUMMYDUMMYDUMMYDUMMYDUMMY"
           } > local.properties
+          cat local.properties
 
       - name: Build
         run: ./gradlew assembleRelease --no-daemon --stacktrace
