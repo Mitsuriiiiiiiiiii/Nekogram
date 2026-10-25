@@ -7,7 +7,7 @@ on:
 jobs:
   apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,15 +25,13 @@ jobs:
       - name: Espace disque
         run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
 
-      - name: Configure Gradle
-        run: |
-          mkdir -p ~/.gradle
-          echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
-          echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
-          echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
-
       - name: Config
         run: |
+          mkdir -p ~/.gradle
+          echo 'org.gradle.caching=true' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.parallel=true' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.jvmargs=-Xmx8g -Dfile.encoding=UTF-8' >> ~/.gradle/gradle.properties
+
           {
             echo "sdk.dir=${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
             echo "storeFile=$GITHUB_WORKSPACE/neko.jks"
@@ -43,22 +41,25 @@ jobs:
             echo "apiId=35232256"
             echo "apiHash=6c9b7f5467f4d00baef445bee72538b1"
             echo "helperBotId=0"
-            echo "helperBotUsername=botfather"
-            echo "sentryDsn=https://dummy@o0.ingest.sentry.io/0"
-            echo "mapsApiKey=AIzaSyDUMMYDUMMYDUMMYDUMMYDUMMYDUMMY"
+            echo "helperBotUsername="
+            echo "sentryDsn="
+            echo "mapsApiKey="
           } > local.properties
           cat local.properties
 
       - name: Build
         run: |
-          ./gradlew assembleRelease --no-daemon --stacktrace \
-            -x :TMessagesProj_App:uploadSentryProguardMappingsRelease \
-            -x :TMessagesProj_App:uploadSentryNativeSymbolsForRelease \
-            -x :TMessagesProj_App:sentryBundleSourcesRelease
+          ./gradlew assembleAfatRelease --no-daemon \
+            -x uploadSentryProguardMappingsRelease \
+            -x uploadSentryNativeSymbolsForRelease \
+            -x sentryBundleSourcesRelease
 
-      - name: Upload APK
+      - name: Lister les APK
         if: always()
-        uses: actions/upload-artifact@v4
+        run: find . -name '*.apk' -exec ls -lh {} \;
+
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: apk
           path: '**/build/outputs/apk/**/*.apk'
