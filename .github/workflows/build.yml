@@ -1,66 +1,88 @@
 name: build
 
 on:
-  workflow_dispatch:
   push:
+  workflow_dispatch:
 
 jobs:
-  apk:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_HARDLINK: "true"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_MAXSIZE: "10G"
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - uses: actions/setup-java@v4
+      - name: JDK
+        uses: actions/setup-java@v4
         with:
+          java-version: '21'
           distribution: temurin
-          java-version: '25'
 
-      - uses: android-actions/setup-android@v4
+      - name: ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          remove_stale_cache: false
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
         with:
           packages: "build-tools;37.0.0 ndk;27.3.13750724 platforms;android-37.0 cmake;3.22.1"
 
-      - name: Espace disque
-        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+      - name: Keystore
+        uses: actions/cache@v4
+        with:
+          path: keystore.jks
+          key: keystore-v1
 
       - name: Config
         run: |
           mkdir -p ~/.gradle
           echo 'org.gradle.caching=true' >> ~/.gradle/gradle.properties
           echo 'org.gradle.parallel=true' >> ~/.gradle/gradle.properties
-          echo 'org.gradle.jvmargs=-Xmx8g -Dfile.encoding=UTF-8' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8' >> ~/.gradle/gradle.properties
 
-          {
-            echo "sdk.dir=${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-            echo "storeFile=$GITHUB_WORKSPACE/neko.jks"
-            echo "storePassword=123456"
-            echo "keyAlias=neko"
-            echo "keyPassword=123456"
-            echo "apiId=35232256"
-            echo "apiHash=6c9b7f5467f4d00baef445bee72538b1"
-            echo "helperBotId=0"
-            echo "helperBotUsername="
-            echo "sentryDsn="
-            echo "mapsApiKey="
-          } > local.properties
-          cat local.properties
+          if [ ! -f keystore.jks ]; then
+            keytool -genkeypair -keystore keystore.jks -alias nekogram \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=Nekogram,OU=dev,O=dev,L=dev,S=dev,C=FR"
+          fi
+
+          echo "apiId=35232256" >> local.properties
+          echo "apiHash=6c9b7f5467f4d00baef445bee72538b1" >> local.properties
+          echo "storeFile=$PWD/keystore.jks" >> local.properties
+          echo "storePassword=android" >> local.properties
+          echo "keyAlias=nekogram" >> local.properties
+          echo "keyPassword=android" >> local.properties
+
+          ls -l TMessagesProj_App/google-services.json || echo "!! google-services.json MANQUANT !!"
 
       - name: Build
-        run: |
-          ./gradlew assembleAfatRelease --no-daemon \
-            -x uploadSentryProguardMappingsRelease \
-            -x uploadSentryNativeSymbolsForRelease \
-            -x sentryBundleSourcesRelease
+        run: >
+          ./gradlew assembleRelease --stacktrace
+          -x sentryBundleSourcesRelease
+          -x uploadSentryProguardMappingsRelease
+          -x uploadSentryNativeSymbolsForRelease
 
-      - name: Lister les APK
+      - name: Liste des apk
         if: always()
-        run: find . -name '*.apk' -exec ls -lh {} \;
+        run: find TMessagesProj_App/build/outputs -name '*.apk' -exec ls -lh {} \;
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload universel
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: apk
-          path: '**/build/outputs/apk/**/*.apk'
+          name: nekogram-universal
+          path: TMessagesProj_App/build/outputs/apk/release/*-universal.apk
           if-no-files-found: warn
+          retention-days: 7
