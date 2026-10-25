@@ -64,6 +64,11 @@ jobs:
           echo "storePassword=android" >> local.properties
           echo "keyAlias=nekogram" >> local.properties
           echo "keyPassword=android" >> local.properties
+            echo "sdk.dir=$ANDROID_HOME" >> local.properties
+            echo "mapsApiKey=AIzaSyDUMMYDUMMYDUMMYDUMMYDUMMYDUMMY" >> local.properties
+            echo "sentryDsn=https://dummy@o0.ingest.sentry.io/0" >> local.properties
+            echo "helperBotId=0" >> local.properties
+            echo "helperBotUsername=botfather" >> local.properties
 
           ls -l TMessagesProj_App/google-services.json || echo "!! google-services.json MANQUANT !!"
 

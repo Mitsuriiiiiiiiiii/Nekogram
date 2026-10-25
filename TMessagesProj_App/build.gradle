@@ -88,7 +88,7 @@ android {
 
         multiDexEnabled true
 
-        manifestPlaceholders = [MAPS_API_KEY: localProperties.get("mapsApiKey")]
+        manifestPlaceholders = [MAPS_API_KEY: (localProperties.get("mapsApiKey") ?: "")]
     }
 
     splits.abi {
@@ -97,7 +97,7 @@ android {
         universalApk true
 
         reset()
-        include "armeabi-v7a", "arm64-v8a"
+        include "armeabi-v7a"
     }
     namespace 'org.telegram.messenger.regular'
 
