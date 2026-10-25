@@ -7,7 +7,7 @@ on:
 jobs:
   apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,6 +24,13 @@ jobs:
 
       - name: Espace disque
         run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+
+      - name: Configure Gradle
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
+          echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
+          echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
 
       - name: Config
         run: |
