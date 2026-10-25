@@ -50,9 +50,15 @@ jobs:
           cat local.properties
 
       - name: Build
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        run: |
+          ./gradlew assembleRelease --no-daemon --stacktrace \
+            -x :TMessagesProj_App:uploadSentryProguardMappingsRelease \
+            -x :TMessagesProj_App:uploadSentryNativeSymbolsForRelease \
+            -x :TMessagesProj_App:sentryBundleSourcesRelease
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: apk
           path: '**/build/outputs/apk/**/*.apk'
